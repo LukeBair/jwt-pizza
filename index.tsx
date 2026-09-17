@@ -9,7 +9,8 @@ if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <BrowserRouter>
-      <App />
+      {/*<App />*/}
+      <p>Hello github pages</p>
     </BrowserRouter>
   );
 } else {
