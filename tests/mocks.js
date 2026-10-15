@@ -208,3 +208,22 @@ export async function basicInit(page) {
     await mockOrder(page);
 }
 
+export async function mockUpdateUser(page) {
+    await page.route(/\/api\/user\/\d+$/, async (route) => {
+        if (route.request().method() !== 'PUT') {
+            await route.fallback();
+            return;
+        }
+        const updateReq = route.request().postDataJSON();
+        const updateRes = {
+            user: {
+                id: 3,
+                name: updateReq.name,
+                email: updateReq.email,
+                roles: [{ role: 'diner' }],
+            },
+            token: 'mnopqr',
+        };
+        await route.fulfill({ json: updateRes });
+    });
+}
