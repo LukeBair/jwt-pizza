@@ -227,3 +227,57 @@ export async function mockUpdateUser(page) {
         await route.fulfill({ json: updateRes });
     });
 }
+
+export async function mockAdminAuth(page) {
+    await page.route('*/**/api/auth', async (route) => {
+        if (route.request().method() !== 'PUT') {
+            await route.fallback();
+            return;
+        }
+        const loginRes = {
+            user: {
+                id: 1,
+                name: 'Admin Person',
+                email: 'a@jwt.com',
+                roles: [{ role: 'admin' }],
+            },
+            token: 'admintoken',
+        };
+        await route.fulfill({ json: loginRes });
+    });
+}
+
+export async function mockListUsers(page) {
+    const allUsers = [
+        { id: 1, name: 'Admin Person', email: 'a@jwt.com', roles: [{ role: 'admin' }] },
+        { id: 2, name: 'Buddy', email: 'b@jwt.com', roles: [{ role: 'diner' }] },
+        { id: 3, name: 'Kai Chen', email: 'd@jwt.com', roles: [{ role: 'diner' }] },
+        { id: 4, name: 'Franny', email: 'f@jwt.com', roles: [{ role: 'diner' }, { role: 'franchisee', objectId: '2' }] },
+    ];
+    await page.route(/\/api\/user\?/, async (route) => {
+        expect(route.request().method()).toBe('GET');
+        const url = new URL(route.request().url());
+        const pageNum = Number(url.searchParams.get('page'));
+        const limit = Number(url.searchParams.get('limit'));
+        const nameFilter = (url.searchParams.get('name') || '*').replace(/\*/g, '').toLowerCase();
+        const matches = allUsers.filter((u) => u.name.toLowerCase().includes(nameFilter));
+        const users = matches.slice(pageNum * limit, pageNum * limit + limit);
+        await route.fulfill({ json: { users, more: matches.length > (pageNum + 1) * limit } });
+    });
+    return allUsers;
+}
+
+export async function mockDeleteUser(page, allUsers) {
+    await page.route(/\/api\/user\/\d+$/, async (route) => {
+        if (route.request().method() !== 'DELETE') {
+            await route.fallback();
+            return;
+        }
+        const id = Number(route.request().url().split('/').pop());
+        allUsers.splice(
+            allUsers.findIndex((u) => u.id === id),
+            1,
+        );
+        await route.fulfill({ json: { message: 'user deleted' } });
+    });
+}
